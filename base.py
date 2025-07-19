@@ -76,6 +76,7 @@ class GattCharacteristic(DBusObject):
         self.service = service
         self.descriptors = []
         self.value = []
+        self.notifying = False
         super().__init__(self.bus, self.path)
 
     def add_descriptor(self, descriptor):
@@ -116,7 +117,7 @@ class GattCharacteristic(DBusObject):
                 "org.freedesktop.DBus.Error.InvalidArgs"
             )
 
-        return {
+        result = {
             "Service": self.service.get_path(),
             "UUID": self.uuid,
             "Flags": self.flags,
@@ -124,9 +125,36 @@ class GattCharacteristic(DBusObject):
                 [d.get_path() for d in self.descriptors], signature="o"
             ),
         }
+        if hasattr(self, "value"):
+            result["Value"] = dbus.Array(self.value, signature="y")
+        return result
+
+    @dbus.service.method(GATT_CHRC_IFACE, in_signature="a{sv}", out_signature="ay")
+    def ReadValue(self, options):
+        print("Default ReadValue called, returning error")
+        raise NotSupportedException()
+
+    @dbus.service.method(GATT_CHRC_IFACE, in_signature="aya{sv}")
+    def WriteValue(self, value, options):
+        print("Default WriteValue called, returning error")
+        raise NotSupportedException()
+
+    @dbus.service.method(GATT_CHRC_IFACE)
+    def StartNotify(self):
+        self.notifying = True
+        print("🔔 StartNotify 被调用")
+
+    @dbus.service.method(GATT_CHRC_IFACE)
+    def StopNotify(self):
+        self.notifying = False
+        print("🔕 StopNotify 被调用")
 
     @dbus.service.signal(GATT_CHRC_IFACE, signature="sa{sv}as")
     def PropertiesChanged(self, interface, changed, invalidated):
+        pass
+
+    @dbus.service.signal(DBUS_PROP_IFACE, signature='ay')
+    def ReportValueChanged(self, reportValue):
         pass
 
 
@@ -171,7 +199,8 @@ class Application(DBusObject):
 
     def __init__(self, bus):
         self.bus = bus
-        self.path = "/org/bluez/example/app"
+        # self.path = "/org/bluez/example/app"
+        self.path = "/"
         self.services = []
         super().__init__(self.bus, self.path)
 
@@ -211,6 +240,7 @@ class Advertisement(DBusObject):
         self.local_name = None
         self.include_tx_power = False
         self.appearance = 0x03C1  # 键盘
+        # dbus.UInt16(961),  # HID Keyboard
         super().__init__(self.bus, self.path)
 
     def add_service_uuid(self, uuid):

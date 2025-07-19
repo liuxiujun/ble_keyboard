@@ -2,22 +2,30 @@
 import dbus
 from base import GattCharacteristic, GattDescriptor
 
+GATT_CHRC_IFACE = "org.bluez.GattCharacteristic1"
+
 # HID Information characteristic
 class HIDInformationCharacteristic(GattCharacteristic):
+    CHARACTERISTIC_UUID = '2A4A'
     def __init__(self, bus, index, service):
         GattCharacteristic.__init__(
             self, bus, index,
-            '00002A4A-0000-1000-8000-00805f9b34fb',
+            self.CHARACTERISTIC_UUID,
             ['read'],
             service)
         self.value = [0x01, 0x01, 0x00, 0x03]  # HID v1.1, CountryCode=0, Flags=3
 
+    def ReadValue(self, options):
+        print(f'Read HIDInformation: {self.value}')
+        return self.value
+
 # HID Report Map characteristic
 class ReportMapCharacteristic(GattCharacteristic):
+    CHARACTERISTIC_UUID = '2A4B'
     def __init__(self, bus, index, service):
         GattCharacteristic.__init__(
             self, bus, index,
-            '00002A4B-0000-1000-8000-00805f9b34fb',
+            self.CHARACTERISTIC_UUID,
             ['read'],
             service)
         self.value = [
@@ -54,23 +62,33 @@ class ReportMapCharacteristic(GattCharacteristic):
             0x81, 0x00,       #   Input (Data, Array)
             0xC0              # End Collection
         ]
+    def ReadValue(self, options):
+        print(f'Read ReportMap: {self.value}')
+        return self.value
 
-# Protocol Mode characteristic (Report Mode)
-class ProtocolModeCharacteristic(GattCharacteristic):
+
+class ControlPointCharacteristic(GattCharacteristic):
+    CHARACTERISTIC_UUID = '2A4C'
     def __init__(self, bus, index, service):
         GattCharacteristic.__init__(
-            self, bus, index,
-            '00002A4E-0000-1000-8000-00805f9b34fb',
-            ['read', 'write-without-response'],
-            service)
-        self.value = [0x01]  # Report Protocol Mode
+                self, bus, index,
+                self.CHARACTERISTIC_UUID,
+                ["write-without-response"],
+                service)
+        
+        self.value = dbus.Array(bytearray.fromhex('00'), signature=dbus.Signature('y'))
+
+    def WriteValue(self, value, options):
+        print(f'Write ControlPoint {value}')
+        self.value = value
 
 # Input Report characteristic
 class InputReportCharacteristic(GattCharacteristic):
+    CHARACTERISTIC_UUID = '2A4D'
     def __init__(self, bus, index, service):
         GattCharacteristic.__init__(
             self, bus, index,
-            '00002A4D-0000-1000-8000-00805f9b34fb',
+            self.CHARACTERISTIC_UUID,
             ['read', 'notify'],
             service)
         self.value = [0x00] * 8
@@ -82,8 +100,31 @@ class InputReportCharacteristic(GattCharacteristic):
         self.add_descriptor(GattDescriptor(bus, 1, '2908', ['read'], self, [0x01, 0x01]))
 
     def send_key_report(self, report):
+        """发送按键报告（仅在通知启用时）"""
+        print(f"⌨️ 发送 HID 报文: {report}")
+        self.value = report
         self.PropertiesChanged(
             'org.bluez.GattCharacteristic1',
             {'Value': dbus.Array(report, signature='y')},
             []
         )
+
+# Protocol Mode characteristic (Report Mode)
+class ProtocolModeCharacteristic(GattCharacteristic):
+    CHARACTERISTIC_UUID = '2A4E'
+    def __init__(self, bus, index, service):
+        GattCharacteristic.__init__(
+            self, bus, index,
+            self.CHARACTERISTIC_UUID,
+            ['read', 'write-without-response'],
+            service)
+        self.value = [0x01]  # Report Protocol Mode
+
+    def ReadValue(self, options):
+        print(f'Read ProtocolMode: {self.value}')
+        return self.value
+
+    def WriteValue(self, value, options):
+        print(f'Write ProtocolMode {value}')
+        self.value = value
+

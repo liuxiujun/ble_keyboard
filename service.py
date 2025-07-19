@@ -6,6 +6,7 @@ import dbus.service
 from base import GattService
 from characteristic import (
     HIDInformationCharacteristic,
+    ControlPointCharacteristic,
     InputReportCharacteristic,
     ProtocolModeCharacteristic,
     ReportMapCharacteristic,
@@ -13,13 +14,19 @@ from characteristic import (
 
 
 class HIDService(GattService):
-    HID_UUID = "00001812-0000-1000-8000-00805f9b34fb"
+    HID_UUID = "1812"
 
     def __init__(self, bus, index):
         GattService.__init__(self, bus, index, self.HID_UUID, True)
 
-        self.add_characteristic(HIDInformationCharacteristic(bus, 0, self))
-        self.add_characteristic(ReportMapCharacteristic(bus, 1, self))
-        self.add_characteristic(ProtocolModeCharacteristic(bus, 2, self))
-        self.input_report = InputReportCharacteristic(bus, 3, self)
-        self.add_characteristic(self.input_report)
+        self.protocolMode = ProtocolModeCharacteristic(bus, 0, self)
+        self.hidInformation = HIDInformationCharacteristic(bus, 1, self)
+        self.controlPoint = ControlPointCharacteristic(bus, 2, self)
+        self.inputReport = InputReportCharacteristic(bus, 3, self)
+        self.reportMap = ReportMapCharacteristic(bus, 4,self)
+
+        self.add_characteristic(self.protocolMode)
+        self.add_characteristic(self.hidInformation)
+        self.add_characteristic(self.controlPoint)
+        self.add_characteristic(self.inputReport)
+        self.add_characteristic(self.reportMap)
