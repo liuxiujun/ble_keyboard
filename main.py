@@ -1,6 +1,7 @@
 # main.py
-import dbus
 import signal
+
+import dbus
 import dbus.mainloop.glib
 from dbus import Dictionary, Signature
 from gi.repository import GLib
@@ -9,6 +10,7 @@ from base import Advertisement, Application
 from service import HIDService
 
 BLUEZ_SERVICE_NAME = "org.bluez"
+
 
 def find_adapter(bus):
     """获取蓝牙适配器路径"""
@@ -39,6 +41,7 @@ def register_app_error_cb(error):
     print(f"❌ GATT 服务注册失败: {error}")
     mainloop.quit()
 
+
 def start_periodic_key_press(char):
     def send_key():
         if not char.notifying:
@@ -61,6 +64,7 @@ def start_periodic_key_press(char):
     # 每 5 秒调用一次 send_key
     GLib.timeout_add_seconds(5, send_key)
 
+
 def shutdown():
     try:
         print("🛑 正在清理资源...")
@@ -72,13 +76,15 @@ def shutdown():
         if mainloop.is_running():
             mainloop.quit()
 
+
 def main():
     global mainloop, gatt_manager, adv_manager, app, adv
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     bus = dbus.SystemBus()
     # adapter = find_adapter(bus)
     adapter_props = dbus.Interface(
-        bus.get_object(BLUEZ_SERVICE_NAME, "/org/bluez/hci0"), "org.freedesktop.DBus.Properties"
+        bus.get_object(BLUEZ_SERVICE_NAME, "/org/bluez/hci0"),
+        "org.freedesktop.DBus.Properties",
     )
     # print(adapter_props.GetAll("org.bluez.Adapter1"))
 
@@ -98,22 +104,22 @@ def main():
     app.add_service(hid_service)
 
     adv = Advertisement(bus, 0, "peripheral")
-    adv.add_service_uuid("00001812-0000-1000-8000-00805f9b34fb")  # HID Service
+    adv.add_service_uuid(hid_service.HID_UUID)  # HID Service
 
     adv.set_local_name("MyBLEKeyboard")
     adv.include_tx_power = True
 
     print("📡 正在注册 GATT 服务……")
 
-    for svc in app.services:
-        print(f"\n📦 Service {svc.uuid} @ {svc.get_path()}")
-        for ch in svc.characteristics:
-            print(f"  ├─ Characteristic {ch.uuid} @ {ch.get_path()}")
-            print(f"     Flags: {ch.flags}")
-            for desc in getattr(ch, "descriptors", []):
-                print(f"     └─ Descriptor {desc.uuid} @ {desc.get_path()}")
-                print(f"        Flags: {desc.flags}")
-                print(f"        Value: {desc.value}")
+    # for svc in app.services:
+    #     print(f"\n📦 Service {svc.uuid} @ {svc.get_path()}")
+    #     for ch in svc.characteristics:
+    #         print(f"  ├─ Characteristic {ch.uuid} @ {ch.get_path()}")
+    #         print(f"     Flags: {ch.flags}")
+    #         for desc in getattr(ch, "descriptors", []):
+    #             print(f"     └─ Descriptor {desc.uuid} @ {desc.get_path()}")
+    #             print(f"        Flags: {desc.flags}")
+    #             print(f"        Value: {desc.value}")
 
     gatt_manager.RegisterApplication(
         app.get_path(),

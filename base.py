@@ -153,7 +153,7 @@ class GattCharacteristic(DBusObject):
     def PropertiesChanged(self, interface, changed, invalidated):
         pass
 
-    @dbus.service.signal(DBUS_PROP_IFACE, signature='ay')
+    @dbus.service.signal(DBUS_PROP_IFACE, signature="ay")
     def ReportValueChanged(self, reportValue):
         pass
 
@@ -195,22 +195,21 @@ class GattDescriptor(DBusObject):
         self.value = value
 
 
-class Application(DBusObject):
+class Application(dbus.service.Object):
 
     def __init__(self, bus):
         self.bus = bus
-        # self.path = "/org/bluez/example/app"
-        self.path = "/"
+        self.path = "/org/bluez/example/app"
         self.services = []
         super().__init__(self.bus, self.path)
 
     def add_service(self, service):
         self.services.append(service)
-        service.GetAll("org.bluez.GattService1")
 
-    @dbus.service.method(
-        "org.freedesktop.DBus.ObjectManager", out_signature="a{oa{sa{sv}}}"
-    )
+    def get_path(self):
+        return dbus.ObjectPath(self.path)
+
+    @dbus.service.method(DBUS_OM_IFACE, out_signature="a{oa{sa{sv}}}")
     def GetManagedObjects(self):
         response = {}
         for service in self.services:
@@ -240,7 +239,6 @@ class Advertisement(DBusObject):
         self.local_name = None
         self.include_tx_power = False
         self.appearance = 0x03C1  # 键盘
-        # dbus.UInt16(961),  # HID Keyboard
         super().__init__(self.bus, self.path)
 
     def add_service_uuid(self, uuid):
